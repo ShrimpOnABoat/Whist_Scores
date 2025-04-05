@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import CloudKit
 
 @main
 struct Whist_ScoresApp: App {
+    @StateObject private var gameManager = GameManager()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(gameManager)
         }
     }
 }

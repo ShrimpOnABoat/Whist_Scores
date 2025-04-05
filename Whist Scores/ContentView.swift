@@ -8,17 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var gameManager: GameManager
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch gameManager.phase {
+            case .betInput:
+                BetInputView()
+            case .scoreInput:
+                ScoreInputView()
+            case .gameOver:
+                GameOverView()
+            }
         }
-        .padding()
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(GameManager())
 }
