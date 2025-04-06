@@ -15,12 +15,45 @@ struct ScoreBoardView: View {
             // Player Names
             HStack {
                 ForEach(gameManager.players, id: \.self) { name in
-                    Text(name.uppercased())
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
+                    ZStack(alignment: .trailing) {
+                        HStack(spacing: 4) {
+                            Text(name.uppercased())
+                                .font(.headline)
+
+                            if gameManager.dealer == name {
+                                DealerButton(size: 25)
+                                    .offset(x: 5)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(6)
+                        .background(
+                            gameManager.dealer == name ?
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.yellow.opacity(0.3)) :
+                                nil
+                        )
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
 
+            // Player Names
+            HStack {
+                ForEach(gameManager.players, id: \.self) { name in
+                    ZStack(alignment: .trailing) {
+                        if let bonus = gameManager.bonusCards[name] {
+                            if bonus == 1 {
+                                OneCardIcon(size: 40)
+                            } else if bonus == 2 {
+                                TwoCardsIcon(size: 40)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            
             // Tricks and Scores
             HStack {
                 ForEach(gameManager.players, id: \.self) { player in

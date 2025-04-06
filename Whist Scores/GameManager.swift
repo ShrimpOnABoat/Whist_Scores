@@ -6,8 +6,9 @@
 //
 
 // TODO: add a reset button
-// TODO: Show the bonus cards for each player
-// TODO: Show who's the dealer, or the starting player for the round
+// TODO: add a RoundHistoryView
+// TODO: save the score locally if there's no network
+// TODO: ask for the loser and the months if there's no network
 
 import Foundation
 import CloudKit
@@ -18,11 +19,19 @@ enum GamePhase {
     case gameOver
 }
 
+struct Loser {
+    let player: String
+    let losingMonths: Int
+}
+
 class GameManager: ObservableObject {
     @Published var players: [String] = ["gg", "dd", "toto"]
-    @Published var startingPlayer: String = ["gg", "dd", "toto"].randomElement() ?? "gg"
+    @Published var dealer: String = ["gg", "dd", "toto"].randomElement() ?? "gg"
+    @Published var needsLeftPlayerSelection = true
+    
     @Published var currentRound: Int = 0 // The first round is 0, the last one is 11
     @Published var phase: GamePhase = .betInput
+    @Published var bonusCards: [String: Int] = [:]
     
     @Published var scores: [String: [Int]] = [:]
     @Published var playerBets: [String: [Int]] = [:]
@@ -65,45 +74,42 @@ class GameManager: ObservableObject {
         }
     }
     
-    func startGame(with players: [String], starting: String) {
-        self.players = players
-        self.startingPlayer = starting
-        self.currentRound = 0
+    //MARK: Game Logic
+    func newGame() {
+        advanceDealer()
+        self.currentRound = -1
         self.scores = Dictionary(uniqueKeysWithValues: players.map { ($0, []) })
+        self.playerBets = Dictionary(uniqueKeysWithValues: players.map { ($0, []) })
+        self.playerTricks = Dictionary(uniqueKeysWithValues: players.map { ($0, []) })
         self.phase = .betInput
-    }
-    
-    func submitBets(bets: [String: Int]) {
-        var processedBets = bets
-        for player in players {
-            if processedBets[player] == -1 {
-                processedBets[player] = Int.random(in: 0...cardsForCurrentRound)
-            }
-        }
         
-        // Store the bets for this round
-        for player in players {
-            if playerBets[player] == nil {
-                playerBets[player] = []
-            }
-            playerBets[player]?.append(processedBets[player] ?? 0)
-        }
-        
-        self.phase = .scoreInput
-    }
-    
-    func submitTricks(tricks: [String: Int]) {
-        for player in players {
-            if playerTricks[player] == nil {
-                playerTricks[player] = []
-            }
-            playerTricks[player]?.append(tricks[player] ?? 0)
-        }
-        
-        updateScores()
         advanceToNextRound()
     }
     
+    func advanceToNextRound() {
+        currentRound += 1
+        advanceDealer()
+        assignBonusCards()
+        
+        if currentRound >= 12 {
+            phase = .gameOver
+        } else {
+            phase = .betInput
+        }
+    }
+    
+    func advanceDealer() {
+        if let currentIndex = players.firstIndex(of: dealer) {
+            let nextIndex = (currentIndex + 1) % players.count
+            dealer = players[nextIndex]
+        }
+    }
+    
+    func selectLeftPlayer(player: String) {
+        if player == "dd" {
+            players = ["dd", "gg", "toto"]
+        }
+    }
     
     func updateScores() {
         for player in players {
@@ -142,19 +148,9 @@ class GameManager: ObservableObject {
         }
     }
     
-    func advanceToNextRound() {
-        currentRound += 1
-        
-        if currentRound >= 12 {
-            phase = .gameOver
-        } else {
-            phase = .betInput
-        }
-    }
-    
     func resetGame() {
         players = []
-        startingPlayer = players.randomElement() ?? "gg"
+        dealer = players.randomElement() ?? "gg"
         currentRound = 0
         scores = [:]
         playerBets = [:]
@@ -162,6 +158,39 @@ class GameManager: ObservableObject {
         phase = .betInput
     }
     
+    //MARK: Inputs
+    func submitBets(bets: [String: Int]) {
+        var processedBets = bets
+        for player in players {
+            if processedBets[player] == -1 {
+                processedBets[player] = Int.random(in: 0...cardsForCurrentRound)
+            }
+        }
+        
+        // Store the bets for this round
+        for player in players {
+            if playerBets[player] == nil {
+                playerBets[player] = []
+            }
+            playerBets[player]?.append(processedBets[player] ?? 0)
+        }
+        
+        self.phase = .scoreInput
+    }
+    
+    func submitTricks(tricks: [String: Int]) {
+        for player in players {
+            if playerTricks[player] == nil {
+                playerTricks[player] = []
+            }
+            playerTricks[player]?.append(tricks[player] ?? 0)
+        }
+        
+        updateScores()
+        advanceToNextRound()
+    }
+    
+    //MARK: Upload score
     func uploadFinalScores(completion: @escaping (Bool) -> Void) {
         let record = CKRecord(recordType: "WhistGame")
         record["date"] = Date()
@@ -176,9 +205,108 @@ class GameManager: ObservableObject {
         }
     }
     
+    // MARK: Bonus cards
+    
+    func assignBonusCards() {
+        guard currentRound >= 3 else {
+            for player in players {
+                bonusCards[player] = 0
+            }
+            return
+        }
+
+        var positionToPlayers: [Int: [String]] = [:]
+
+        for player in players {
+            let position = determinePosition(for: player)
+            positionToPlayers[position, default: []].append(player)
+        }
+
+        for player in players {
+            let position = determinePosition(for: player)
+
+            switch position {
+            case 1:
+                bonusCards[player] = 0
+            case 2:
+                bonusCards[player] = 1
+                if let loser = loser, player == loser.player, loser.losingMonths > 1 {
+                    bonusCards[player] = 2
+                }
+            case 3:
+                bonusCards[player] = 1
+                if let loser = loser, player == loser.player {
+                    bonusCards[player] = 2
+                } else if
+                    let score = scores[player]?.last,
+                    let second = positionToPlayers[2]?.first,
+                    let secondScore = scores[second]?.last,
+                    score <= secondScore / 2 {
+                    bonusCards[player] = 2
+                }
+            default:
+                bonusCards[player] = 0
+            }
+        }
+    }
+    
+    private func determinePosition(for player: String) -> Int {
+        /// Returns 1 if the player has the highest score (even in case of tie),
+        /// 2 if in the middle, and 3 if last based on current and historical scores.
+        
+        let currentScores = players.map { ($0, scores[$0]?.last ?? 0) }
+        let sortedByScore = currentScores.sorted { $0.1 > $1.1 }
+        let highestScore = sortedByScore.first?.1 ?? 0
+        let lowestScore = sortedByScore.last?.1 ?? 0
+        let playerScore = scores[player]?.last ?? 0
+
+        if playerScore == highestScore {
+            return 1
+        }
+
+        if playerScore == lowestScore {
+            let playersWithLowest = currentScores.filter { $0.1 == lowestScore }.map { $0.0 }
+
+            if playersWithLowest.count > 1 {
+                let otherPlayer = playersWithLowest.first { $0 != player }
+
+                for round in stride(from: currentRound - 1, through: 0, by: -1) {
+                    let playerScoreAtRound = scores[player]?[round] ?? Int.min
+                    let otherScoreAtRound = scores[otherPlayer ?? ""]?[round] ?? Int.min
+
+                    if playerScoreAtRound != otherScoreAtRound {
+                        return playerScoreAtRound < otherScoreAtRound ? 3 : 2
+                    }
+                }
+
+                // Fallback to dealer order
+                if let dealerIndex = players.firstIndex(of: dealer),
+                   let playerIndex = players.firstIndex(of: player),
+                   let otherIndex = players.firstIndex(of: otherPlayer ?? "") {
+
+                    let leftOfDealerIndex = (dealerIndex + 1) % players.count
+
+                    if playerIndex == dealerIndex {
+                        return 3
+                    } else if otherIndex == dealerIndex {
+                        return 2
+                    } else if playerIndex == leftOfDealerIndex {
+                        return 3
+                    } else {
+                        return 2
+                    }
+                }
+            } else {
+                return 3
+            }
+        }
+
+        return 2
+    }
+    
     func loadPreviewData(phase: GamePhase = .betInput) {
         players = ["gg", "dd", "toto"]
-        startingPlayer = "gg"
+        dealer = "gg"
         currentRound = 4
         self.phase = phase
         scores  = [
@@ -195,6 +323,11 @@ class GameManager: ObservableObject {
             "gg": [1, 0, 1, 1],
             "dd": [0, 1, 0, 2],
             "toto": [1, 1, 1, 1]
+        ]
+        bonusCards = [
+            "gg": 0,
+            "dd": 1,
+            "toto": 2
         ]
     }
 }

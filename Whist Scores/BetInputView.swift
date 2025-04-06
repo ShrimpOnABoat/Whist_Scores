@@ -44,8 +44,6 @@ struct BetInputView: View {
             }
         }
 
-        Text("GG: \(String(describing: bets["gg"]))  DD: \(String(describing: bets["dd"]))  Toto: \(String(describing: bets["toto"]))")
-        
         Button("Confirme les mises") {
             gameManager.submitBets(bets: bets)
         }

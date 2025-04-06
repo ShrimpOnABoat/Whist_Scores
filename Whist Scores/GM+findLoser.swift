@@ -8,11 +8,6 @@
 import Foundation
 import CloudKit
 
-struct Loser {
-    let player: String
-    let losingMonths: Int
-}
-
 struct GameScore: Codable, Identifiable {
     let id = UUID() // Unique ID for each game
     let date: Date

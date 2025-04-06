@@ -17,20 +17,20 @@ struct ScoreInputView: View {
         ScoreBoardView()
             .environmentObject(gameManager)
             .onAppear {
-                tricks["gg"] = 0
-                tricks["dd"] = 0
+                tricks[gameManager.players[0]] = 0
+                tricks[gameManager.players[1]] = 0
                 tricks["toto"] = gameManager.cardsForCurrentRound
             }
         
         Form {
             Section(header: Text("Entre les résultats").bold()) {
                 HStack {
-                    Text("gg")
+                    Text(gameManager.players[0])
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Picker("Tricks", selection: Binding(
-                        get: { tricks["gg"] ?? 0 },
-                        set: { tricks["gg"] = $0 }
+                        get: { tricks[gameManager.players[0]] ?? 0 },
+                        set: { tricks[gameManager.players[0]] = $0 }
                     )) {
                         ForEach(0...gameManager.cardsForCurrentRound, id: \.self) { value in
                             Text("\(value)").tag(value)
@@ -42,13 +42,13 @@ struct ScoreInputView: View {
                 }
 
                 HStack {
-                    Text("dd")
+                    Text(gameManager.players[1])
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    let maxDD = gameManager.cardsForCurrentRound - (tricks["gg"] ?? 0)
+                    let maxDD = gameManager.cardsForCurrentRound - (tricks[gameManager.players[0]] ?? 0)
                     Picker("Tricks", selection: Binding(
-                        get: { tricks["dd"] ?? 0 },
-                        set: { tricks["dd"] = $0 }
+                        get: { tricks[gameManager.players[1]] ?? 0 },
+                        set: { tricks[gameManager.players[1]] = $0 }
                     )) {
                         ForEach(0...max(0, maxDD), id: \.self) { value in
                             Text("\(value)").tag(value)
@@ -63,7 +63,7 @@ struct ScoreInputView: View {
                     Text("toto")
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    let totoTricks = gameManager.cardsForCurrentRound - (tricks["gg"] ?? 0) - (tricks["dd"] ?? 0)
+                    let totoTricks = gameManager.cardsForCurrentRound - (tricks[gameManager.players[0]] ?? 0) - (tricks[gameManager.players[1]] ?? 0)
                     Text("\(totoTricks)")
                         .frame(height: 80)
                         .frame(maxWidth: .infinity)
@@ -77,8 +77,6 @@ struct ScoreInputView: View {
             let remaining = gameManager.cardsForCurrentRound - gg - dd
             tricks["toto"] = remaining
         }
-
-        Text("GG: \(String(describing: tricks["gg"]))  DD: \(String(describing: tricks["dd"]))  Toto: \(String(describing: tricks["toto"]))")
 
         Button("Confirme les résultats") {
             gameManager.submitTricks(tricks: tricks)
