@@ -5,7 +5,6 @@
 //  Created by Tony Buffard on 2025-04-03.
 //
 
-// TODO: add a reset button
 // TODO: add a RoundHistoryView
 // TODO: save the score locally if there's no network
 // TODO: ask for the loser and the months if there's no network
@@ -315,14 +314,14 @@ class GameManager: ObservableObject {
             "toto": [10, 0, 10, 15]
         ]
         playerBets = [
-            "gg": [1, 0, 1, 2],
-            "dd": [0, 0, 0, 1],
+            "gg": [1, 0, 1, 0],
+            "dd": [0, 0, 0, 0],
             "toto": [1, 0, 1, 1]
         ]
         playerTricks = [
-            "gg": [1, 0, 1, 1],
+            "gg": [1, 0, 1, 0],
             "dd": [0, 1, 0, 2],
-            "toto": [1, 1, 1, 1]
+            "toto": [0, 0, 0, 0]
         ]
         bonusCards = [
             "gg": 0,

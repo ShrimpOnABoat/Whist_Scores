@@ -49,6 +49,10 @@ struct TwoCardsIcon: View {
                     RoundedRectangle(cornerRadius: size * 0.1)
                         .stroke(Color.black.opacity(0.6), lineWidth: 1)
                 )
+                .overlay(
+                    Text("♠️")
+                        .font(.system(size: size * 0.6))
+                )
                 .rotationEffect(.degrees(-10))
                 .offset(x: -size * 0.1)
 
