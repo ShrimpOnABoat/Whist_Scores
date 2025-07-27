@@ -1,0 +1,8 @@
+# Xcode user data (per-user settings like schemes and breakpoints)
+*.xcuserdatad/
+xcshareddata/
+xcdebugger/
+
+# Firebase credentials (don't commit secrets!)
+GoogleService-Info.plist
+
