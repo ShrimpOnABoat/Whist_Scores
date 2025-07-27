@@ -1,5 +1,5 @@
 //
-//  GameScore.swift
+//  ScoresManager.swift
 //  Whist Scores
 //
 //  Created by Tony Buffard on 2025-07-25.
@@ -14,6 +14,7 @@
 //
 
 import Foundation
+import FirebaseFirestore
 
 struct GameScore: Codable, Identifiable {
     var id = UUID() // Keep UUID for Identifiable conformance and potential local use
@@ -58,7 +59,7 @@ struct GameScore: Codable, Identifiable {
 }
 
 struct Loser {
-    let playerId: PlayerId
+    let player: String
     let losingMonths: Int
 }
 
@@ -83,10 +84,6 @@ class ScoresManager {
     init() {}
 
     func saveScore(_ gameScore: GameScore) async throws {
-        #if DEBUG
-        print("DEBUG mode: not saving scores to Firebase.")
-        return
-        #else
         do {
             try await firebaseService.saveGameScore(gameScore)
             print("✅ Successfully saved GameScore with id: \(gameScore.id)")
@@ -94,7 +91,6 @@ class ScoresManager {
             print("❌ Error saving GameScore: \(error.localizedDescription)")
             throw ScoresManagerError.firebaseError(error)
         }
-#endif
     }
 
     func saveScores(_ scores: [GameScore]) async throws {
@@ -209,11 +205,11 @@ class ScoresManager {
             }
         }
 
-        guard let loser = loserName, let loserId = PlayerId(rawValue: loser), losingMonths > 0 else {
+        guard let loser = loserName, losingMonths > 0 else {
             return nil
         }
 
-        return Loser(playerId: loserId, losingMonths: losingMonths)
+        return Loser(player: loser, losingMonths: losingMonths)
     }
 
     func restoreBackup(from backupDirectory: URL) async throws {
@@ -337,5 +333,86 @@ class ScoresManager {
             print("🚨 An unexpected error occurred during export: \(error)")
             throw ScoresManagerError.backupOperationFailed("Export failed: \(error.localizedDescription)")
         }
+    }
+}
+
+class FirebaseService {
+    static let shared = FirebaseService()
+    private let db = Firestore.firestore()
+    private let currentGameStateDocumentId = "current"
+//    private let gameStatesCollection = "gameStates"
+//    private let currentGameActionDocumentId = "current"
+//    private let gameActionsCollection = "gameActions"
+    private let scoresCollection = "scores"
+
+    // MARK: - GameScore
+
+    func saveGameScore(_ score: GameScore) async throws {
+        let id = score.id.uuidString
+        try db.collection(scoresCollection)
+            .document(id)
+            .setData(from: score)
+    }
+
+    func saveGameScores(_ scores: [GameScore]) async throws {
+        let batch = db.batch()
+        let scoresRef = db.collection(scoresCollection)
+        for score in scores {
+            let docRef = scoresRef.document(score.id.uuidString)
+            try batch.setData(from: score, forDocument: docRef)
+        }
+        try await batch.commit()
+        print("Successfully saved \(scores.count) scores in a batch.")
+    }
+
+    func loadScores(for year: Int? = nil) async throws -> [GameScore] {
+        var query: Query = db.collection(scoresCollection)
+            .order(by: "date", descending: true)
+
+        if let year = year,
+           let calendar = Optional(Calendar.current),
+           let startDate = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+           let endDate = calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1)) {
+             query = query.whereField("date", isGreaterThanOrEqualTo: startDate)
+                          .whereField("date", isLessThan: endDate)
+        }
+
+        let snapshot = try await query.getDocuments()
+        let scores = snapshot.documents.compactMap { document -> GameScore? in
+            try? document.data(as: GameScore.self)
+        }
+        print("Successfully loaded \(scores.count) scores\(year == nil ? "" : " for year \(year!)").")
+        return scores
+    }
+
+    func deleteGameScore(id: String) async throws {
+        try await db.collection(scoresCollection).document(id).delete()
+        print("Successfully deleted score with ID: \(id)")
+    }
+
+    func deleteAllGameScores() async throws {
+        let collectionRef = db.collection(scoresCollection)
+        var count = 0
+        var lastSnapshot: DocumentSnapshot? = nil
+
+        repeat {
+            let batch = db.batch()
+            var query = collectionRef.limit(to: 400)
+            if let lastSnapshot = lastSnapshot {
+                query = query.start(afterDocument: lastSnapshot)
+            }
+
+            let snapshot = try await query.getDocuments()
+            guard !snapshot.documents.isEmpty else { break }
+
+            snapshot.documents.forEach { batch.deleteDocument($0.reference) }
+            try await batch.commit()
+
+            count += snapshot.documents.count
+            lastSnapshot = snapshot.documents.last
+
+        } while lastSnapshot != nil
+
+        print("Successfully deleted \(count) scores from collection \(scoresCollection).")
     }
 }

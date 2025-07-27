@@ -6,7 +6,7 @@ struct ScoreBoardView: View {
 
     var body: some View {
         let round = gameManager.currentRound
-        let roundString = round < 3 ? "\(round+1)/3" : "\(round - 1)"
+        let roundString = round < 3 ? "\(round+1)/3" : round < 11 ? "\(round - 1)" : "10"
 
         ZStack {
             VStack(spacing: 12) {
@@ -60,7 +60,7 @@ struct ScoreBoardView: View {
                 // Tricks and Scores
                 HStack {
                     ForEach(gameManager.players, id: \.self) { player in
-                        let totalTricks = gameManager.playerTricks[player]?.reduce(0, +) ?? 0
+                        let totalTricks = gameManager.playerBets[player]?.reduce(0, +) ?? 0
                         let scoreArray = gameManager.scores[player] ?? []
                         let score = round > 0 ? scoreArray[round-1] : 0
                         HStack {
