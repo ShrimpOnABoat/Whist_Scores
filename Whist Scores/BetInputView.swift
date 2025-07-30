@@ -10,7 +10,7 @@ struct BetInputView: View {
             .environmentObject(gameManager)
         
             Form {
-                Section(header: Text("Entre les mises").bold()) {
+                Section(header: Text("Saisis les mises").bold()) {
                 ForEach(gameManager.players, id: \.self) { player in
                     HStack {
                         Text(player)

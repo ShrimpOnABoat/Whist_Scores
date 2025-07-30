@@ -14,7 +14,7 @@ struct ContentView: View {
     @State private var selectedMonths: Int? = nil
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 Group {
                     switch gameManager.phase {
@@ -28,6 +28,8 @@ struct ContentView: View {
                 }
                 Text("\(gameManager.debugString)")
             }
+            .frame(maxWidth: 600)
+            .padding()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Redémarrer") {

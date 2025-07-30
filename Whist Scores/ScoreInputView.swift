@@ -23,7 +23,7 @@ struct ScoreInputView: View {
             }
         
         Form {
-            Section(header: Text("Entre les résultats").bold()) {
+            Section(header: Text("Saisis les résultats").bold()) {
                 HStack {
                     Text(gameManager.players[0])
                         .frame(maxWidth: .infinity, alignment: .leading)
