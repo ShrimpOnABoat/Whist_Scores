@@ -14,28 +14,37 @@ import FirebaseAuth
 @main
 struct Whist_ScoresApp: App {
     @StateObject private var gameManager = GameManager()
+    private var authStateListener: AuthStateDidChangeListenerHandle?
 
     
     init() {
         // Configure Firebase
         AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
         FirebaseApp.configure()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            do {
-                try Auth.auth().signOut()
-                print("✅ Signed out previous anonymous user")
-            } catch {
-                print("⚠️ Could not sign out anonymous user: \(error.localizedDescription)")
-            }
+        // Ensure there is a signed‑in Firebase user
+        if Auth.auth().currentUser == nil {
             Auth.auth().signInAnonymously { authResult, error in
                 if let error = error {
-                    print("❌ Firebase anonymous sign-in failed: \(error.localizedDescription)")
+                    print("❌ Firebase anonymous sign‑in failed: \(error.localizedDescription)")
                 } else if let uid = authResult?.user.uid {
                     print("✅ Signed in anonymously with UID: \(uid)")
                 }
             }
+        } else if let uid = Auth.auth().currentUser?.uid {
+            print("✅ Reusing existing Firebase UID: \(uid)")
         }
-        print("Firebase UID: \(Auth.auth().currentUser?.uid ?? "nil")")
+
+        // Listen for auth‑state changes so we can automatically re‑authenticate
+        self.authStateListener = Auth.auth().addStateDidChangeListener { _, user in
+            guard user == nil else { return }
+            Auth.auth().signInAnonymously { authResult, error in
+                if let error = error {
+                    print("❌ Re‑auth failed: \(error.localizedDescription)")
+                } else if let uid = authResult?.user.uid {
+                    print("✅ Re‑authenticated anonymously with UID: \(uid)")
+                }
+            }
+        }
         let settings = FirestoreSettings()
         settings.cacheSettings = PersistentCacheSettings() // Use disk-backed cache
         Firestore.firestore().settings = settings

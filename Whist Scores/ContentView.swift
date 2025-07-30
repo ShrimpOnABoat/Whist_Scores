@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var gameManager: GameManager
+    @State private var showScores = false
     @State private var showRestartConfirmation = false
     @State private var selectedLoser: String? = nil
     @State private var selectedMonths: Int? = nil
@@ -31,6 +32,11 @@ struct ContentView: View {
             .frame(maxWidth: 600)
             .padding()
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Voir les scores") {
+                        showScores = true
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Redémarrer") {
                         showRestartConfirmation = true
@@ -46,6 +52,9 @@ struct ContentView: View {
                     },
                     secondaryButton: .cancel()
                 )
+            }
+            .sheet(isPresented: $showScores) {
+                ScoresView()
             }
             .sheet(isPresented: $gameManager.needsLeftPlayerSelection) {
                 VStack {
