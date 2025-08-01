@@ -5,17 +5,28 @@
 //  Created by Tony Buffard on 2025-04-03.
 //
 
-// TODO: ask for the loser and the months if there's no network (not working on phone)
 // TODO: back button when inputing scores, in case of a mistake in input bets.
-// TODO: show bets in input scores
+// TODO: save state and reload in case of crash
 
 import Foundation
 import CloudKit
 
-enum GamePhase {
+enum GamePhase: String, Codable {
     case betInput
     case scoreInput
     case gameOver
+}
+
+struct GameState: Codable {
+    var dealer: String
+    var loser: Loser
+    var players: [String]
+    var currentRound: Int
+    var phase: GamePhase
+    var bonusCards: [String: Int]
+    var scores: [String: [Int]]
+    var playerBets: [String: [Int]]
+    var playerTricks: [String: [Int]]
 }
 
 class GameManager: ObservableObject {
@@ -72,18 +83,35 @@ class GameManager: ObservableObject {
     }
     
     init() {
-        Task {
-            if let foundLoser = await GameManager.SM.findLoser() {
-                self.loser = foundLoser
-                print("Updated \(foundLoser.player)'s monthlyLosses to \(foundLoser.losingMonths)")
-            } else {
-                print("No loser identified or loser had 0 losing months.")
+        // Load the saved state if there's one
+        if let data = UserDefaults.standard.data(forKey: "savedGameState"),
+           let loadedState = try? JSONDecoder().decode(GameState.self, from: data) {
+            self.dealer = loadedState.dealer
+            self.loser = loadedState.loser
+            self.players = loadedState.players
+            self.currentRound = loadedState.currentRound
+            self.phase = loadedState.phase
+            self.bonusCards = loadedState.bonusCards
+            self.scores = loadedState.scores
+            self.playerBets = loadedState.playerBets
+            self.playerTricks = loadedState.playerTricks
+            return
+        } else {
+            // Else find the previous month loser
+            Task {
+                if let foundLoser = await GameManager.SM.findLoser() {
+                    self.loser = foundLoser
+                    print("Updated \(foundLoser.player)'s monthlyLosses to \(foundLoser.losingMonths)")
+                } else {
+                    print("No loser identified or loser had 0 losing months.")
+                }
             }
         }
     }
     
     //MARK: Game Logic
     func newGame() {
+        UserDefaults.standard.removeObject(forKey: "savedGameState")
         advanceDealer()
         self.currentRound = -1
         self.scores = [:]
@@ -107,6 +135,32 @@ class GameManager: ObservableObject {
         } else {
             phase = .betInput
         }
+    }
+    
+    func goBack() {
+        switch phase {
+        case .scoreInput:
+            // Going back to bets: switch phase and remove last recorded data
+            for player in players {
+                playerBets[player]?.removeLast()
+            }
+            phase = .betInput
+
+        case .betInput:
+            if currentRound > 0 {
+                currentRound -= 1
+                for player in players {
+                    playerTricks[player]?.removeLast()
+                    scores[player]?.removeLast()
+                }
+                phase = .scoreInput
+            }
+
+        default:
+            break
+        }
+
+        saveState()
     }
     
     func advanceDealer() {
@@ -165,6 +219,8 @@ class GameManager: ObservableObject {
     //MARK: Inputs
     func submitBets(bets: [String: Int]) {
         var processedBets = bets
+        
+        // Assign random bet to first player
         for player in players {
             if processedBets[player] == -1 {
                 processedBets[player] = Int.random(in: 0...cardsForCurrentRound)
@@ -180,6 +236,7 @@ class GameManager: ObservableObject {
         }
         
         self.phase = .scoreInput
+        saveState()
     }
     
     func submitTricks(tricks: [String: Int]) {
@@ -191,6 +248,7 @@ class GameManager: ObservableObject {
         }
         
         updateScores()
+        saveState()
         advanceToNextRound()
     }
     
@@ -217,15 +275,6 @@ class GameManager: ObservableObject {
             totoConsecutiveWins: consecutiveWins(for: "toto")
         )
 
-//        SM.saveScore(gameScore) { result in
-//            switch result {
-//            case .success(_):
-//                completion(true)
-//            case .failure(_):
-//                completion(false)
-//            }
-//        }
-        
         // Save the updated scores array.
         Task {
             do {
@@ -390,5 +439,26 @@ class GameManager: ObservableObject {
             "dd": 1,
             "toto": 2
         ]
+    }
+    // MARK: Save and Load State
+    func saveState() {
+        let gameState = GameState(
+            dealer: dealer,
+            loser: loser ?? Loser(player: "", losingMonths: 0),
+            players: players,
+            currentRound: currentRound,
+            phase: phase,
+            bonusCards: bonusCards,
+            scores: scores,
+            playerBets: playerBets,
+            playerTricks: playerTricks
+        )
+        
+        do {
+            let data = try JSONEncoder().encode(gameState)
+            UserDefaults.standard.set(data, forKey: "savedGameState")
+        } catch {
+            print("Failed to save game state: \(error)")
+        }
     }
 }

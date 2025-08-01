@@ -33,13 +33,25 @@ struct ContentView: View {
             .padding()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Voir les scores") {
-                        showScores = true
+                    if !(gameManager.phase == .gameOver || (gameManager.phase == .betInput && gameManager.currentRound == 0)) {
+                        Button(action: {
+                            gameManager.goBack()
+                        }) {
+                            Image(systemName: "chevron.backward")
+                        }
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Redémarrer") {
-                        showRestartConfirmation = true
+                    Menu {
+                        Button("Voir les scores") {
+                            showScores = true
+                        }
+                        Button("Redémarrer...", role: .destructive) {
+                            showRestartConfirmation = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .imageScale(.large)
                     }
                 }
             }
