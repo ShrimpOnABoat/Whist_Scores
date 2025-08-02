@@ -17,9 +17,12 @@ struct ScoreInputView: View {
         ScoreBoardView()
             .environmentObject(gameManager)
             .onAppear {
-                tricks[gameManager.players[0]] = 0
-                tricks[gameManager.players[1]] = 0
-                tricks["toto"] = gameManager.cardsForCurrentRound
+                let defaults = gameManager.suggestedTricksForCurrentRoundFromBets()
+                tricks = defaults
+            }
+            .onChange(of: gameManager.currentRound) { _, _ in
+                let defaults = gameManager.suggestedTricksForCurrentRoundFromBets()
+                tricks = defaults
             }
         
         Form {

@@ -431,6 +431,33 @@ class GameManager: ObservableObject {
         return 2
     }
     
+    func suggestedTricksForCurrentRoundFromBets() -> [String: Int] {
+        let round = currentRound
+        // 1 card for rounds 0..2, then grows: 2 at 3, 3 at 4, etc.
+        let cardsThisRound = max(round - 1, 1)
+
+        func betFor(_ name: String) -> Int {
+            let arr = playerBets[name] ?? []
+            return (round < arr.count) ? max(0, arr[round]) : 0
+        }
+
+        var result: [String: Int] = [:]
+        var remaining = cardsThisRound
+
+        for i in 0..<(players.count) {
+            let name = players[i]
+            if i == players.count - 1 {
+                result[name] = max(0, remaining)
+            } else {
+                let desired = betFor(name)
+                let take = max(0, min(desired, remaining))
+                result[name] = take
+                remaining -= take
+            }
+        }
+        return result
+    }
+    
     func setManualLoser(player: String?, months: Int) {
         if let name = player {
             loser = Loser(player: name, losingMonths: months)
