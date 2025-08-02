@@ -344,6 +344,7 @@ struct MonthGroup: Identifiable {
 struct DetailedScoresView: View {
     let year: Int
     @State private var monthGroups: [MonthGroup] = []
+    @State private var mastersByMonth: [Int: [String: Bool]] = [:]
 
     var body: some View {
         ZStack {
@@ -360,13 +361,37 @@ struct DetailedScoresView: View {
                     // Section header aligned with score columns
                     Section(
                         header: HStack {
+                            let monthNum = Calendar.current.component(.month, from: group.scores.first?.date ?? Date())
+                            let masters = mastersByMonth[monthNum] ?? [:]
+
                             Text(group.monthName)
                                 .font(.headline)
                                 .frame(width: 80, alignment: .leading)
                             Spacer(minLength: 0)
-                            Text("GG \(group.tallies.gg)").frame(width: 80)
-                            Text("DD \(group.tallies.dd)").frame(width: 80)
-                            Text("Toto \(group.tallies.toto)").frame(width: 80)
+
+                            HStack(spacing: 4) {
+                                if masters["gg"] == true {
+                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
+                                }
+                                Text("GG \(group.tallies.gg)")
+                            }
+                            .frame(width: 80)
+
+                            HStack(spacing: 4) {
+                                if masters["dd"] == true {
+                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
+                                }
+                                Text("DD \(group.tallies.dd)")
+                            }
+                            .frame(width: 80)
+
+                            HStack(spacing: 4) {
+                                if masters["toto"] == true {
+                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
+                                }
+                                Text("Toto \(group.tallies.toto)")
+                            }
+                            .frame(width: 80)
                         }
                     ) {
                         // Group this month’s games by day
@@ -453,9 +478,17 @@ struct DetailedScoresView: View {
                 scores: scores
             )
         }
-        
+        var mastersMap: [Int: [String: Bool]] = [:]
+        for group in groups {
+            if let firstDate = group.scores.first?.date {
+                let monthNum = Calendar.current.component(.month, from: firstDate)
+                let crowns = await ScoresManager.shared.setMaster(for: firstDate)
+                mastersMap[monthNum] = crowns
+            }
+        }
         await MainActor.run {
             self.monthGroups = groups
+            self.mastersByMonth = mastersMap
         }
     }
 

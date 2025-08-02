@@ -239,6 +239,43 @@ class ScoresManager {
 
         return result
     }
+    
+    /// New method to set master for a specific date's month
+    func setMaster(for date: Date) async -> [String: Bool] {
+        var result: [String: Bool] = [
+            "gg": false,
+            "dd": false,
+            "toto": false
+        ]
+
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+
+        let allScores = await loadScoresSafely(for: year)
+        let monthScores = allScores.filter { calendar.component(.month, from: $0.date) == month }
+        guard !monthScores.isEmpty else {
+            return result
+        }
+
+        var maxByPlayer: [String: Int] = ["gg": Int.min, "dd": Int.min, "toto": Int.min]
+        for game in monthScores {
+            if let v = game.ggConsecutiveWins { maxByPlayer["gg"] = max(maxByPlayer["gg"] ?? Int.min, v) }
+            if let v = game.ddConsecutiveWins { maxByPlayer["dd"] = max(maxByPlayer["dd"] ?? Int.min, v) }
+            if let v = game.totoConsecutiveWins { maxByPlayer["toto"] = max(maxByPlayer["toto"] ?? Int.min, v) }
+        }
+
+        let observedValues = maxByPlayer.values.filter { $0 != Int.min }
+        guard let globalMax = observedValues.max() else {
+            return result
+        }
+
+        for (player, value) in maxByPlayer where value == globalMax {
+            result[player] = true
+        }
+
+        return result
+    }
 
 }
 
