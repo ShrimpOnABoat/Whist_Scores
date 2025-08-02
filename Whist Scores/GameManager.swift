@@ -27,6 +27,7 @@ struct GameState: Codable {
     var scores: [String: [Int]]
     var playerBets: [String: [Int]]
     var playerTricks: [String: [Int]]
+    var lastPlayer: String?
 }
 
 class GameManager: ObservableObject {
@@ -41,6 +42,7 @@ class GameManager: ObservableObject {
     @Published var scores: [String: [Int]] = [:]
     @Published var playerBets: [String: [Int]] = [:]
     @Published var playerTricks: [String: [Int]] = [:]
+    @Published var lastPlayer: String?
     
     var loser: Loser?
     @Published var needsLoser: Bool = false
@@ -112,6 +114,7 @@ class GameManager: ObservableObject {
     //MARK: Game Logic
     func newGame() {
         UserDefaults.standard.removeObject(forKey: "savedGameState")
+        lastPlayer = nil
         advanceDealer()
         self.currentRound = -1
         self.scores = [:]
@@ -336,6 +339,7 @@ class GameManager: ObservableObject {
                     bonusCards[player] = 2
                 }
             case 3:
+                lastPlayer = player
                 bonusCards[player] = 1
                 if let loser = loser, player == loser.player {
                     bonusCards[player] = 2

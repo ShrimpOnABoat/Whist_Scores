@@ -29,11 +29,13 @@ struct ScoreBoardView: View {
                     ForEach(gameManager.players, id: \.self) { name in
                         ZStack(alignment: .trailing) {
                             HStack(spacing: 4 * M) {
+                                let isDealer = gameManager.dealer == name
+
                                 Text(name.uppercased())
                                     .font(.system(size: 18 * M, weight: .semibold))
-                                    .foregroundColor(gameManager.dealer == name ? .white : .black)
+                                    .foregroundColor(isDealer ? .white : .black)
 
-                                if gameManager.dealer == name {
+                                if isDealer {
                                     DealerButton(size: 25 * M)
                                         .offset(x: 5 * M)
                                 }
@@ -55,11 +57,20 @@ struct ScoreBoardView: View {
                 HStack {
                     ForEach(gameManager.players, id: \.self) { name in
                         ZStack(alignment: .trailing) {
+                            let isLastPlayer = (gameManager.lastPlayer ?? "") == name
                             if let bonus = gameManager.bonusCards[name] {
-                                if bonus == 1 {
-                                    OneCardIcon(size: 40 * M)
-                                } else if bonus == 2 {
-                                    TwoCardsIcon(size: 40 * M)
+                                ZStack {
+                                    if isLastPlayer {
+                                        Circle()
+                                            .fill(Color.red)
+                                            .blur(radius: 10 * M)
+                                            .frame(width: 40 * M, height: 40 * M)
+                                    }
+                                    if bonus == 1 {
+                                        OneCardIcon(size: 40 * M)
+                                    } else if bonus == 2 {
+                                        TwoCardsIcon(size: 40 * M)
+                                    }
                                 }
                             }
                         }
