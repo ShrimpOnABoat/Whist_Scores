@@ -29,6 +29,7 @@ struct GameState: Codable {
     var playerTricks: [String: [Int]]
     var lastPlayer: String?
     var perfectStreak: [String: Bool]
+    var isMaster: [String: Bool]
 }
 
 class GameManager: ObservableObject {
@@ -48,6 +49,8 @@ class GameManager: ObservableObject {
     
     var loser: Loser?
     @Published var needsLoser: Bool = false
+    
+    @Published var isMaster: [String: Bool] = [:]
     
     @Published var debugString: String = "" {
         didSet {
@@ -99,6 +102,9 @@ class GameManager: ObservableObject {
             self.scores = loadedState.scores
             self.playerBets = loadedState.playerBets
             self.playerTricks = loadedState.playerTricks
+            self.lastPlayer = loadedState.lastPlayer
+            self.perfectStreak = loadedState.perfectStreak
+            self.isMaster = loadedState.isMaster
             return
         } else {
             // Else find the previous month loser
@@ -108,6 +114,11 @@ class GameManager: ObservableObject {
                     print("Updated \(foundLoser.player)'s monthlyLosses to \(foundLoser.losingMonths)")
                 } else {
                     print("No loser identified or loser had 0 losing months.")
+                }
+                let masters = await GameManager.SM.setMaster()
+                await MainActor.run {
+                    self.isMaster = masters
+                    print("isMaster for current month: \(masters)")
                 }
             }
         }
@@ -467,7 +478,8 @@ class GameManager: ObservableObject {
             playerBets: playerBets,
             playerTricks: playerTricks,
             lastPlayer: lastPlayer ?? nil,
-            perfectStreak: perfectStreak
+            perfectStreak: perfectStreak,
+            isMaster: isMaster
         )
         
         do {

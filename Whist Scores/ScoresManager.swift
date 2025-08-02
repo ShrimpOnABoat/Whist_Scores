@@ -187,6 +187,58 @@ class ScoresManager {
 
         return Loser(player: loser, losingMonths: losingMonths)
     }
+    
+    /// Scans all games from the **previous month** and returns who has the highest
+    /// `_consecutive_wins` value. Multiple players can tie. If a player has no
+    /// recorded value for that month, they are ignored. If no values exist,
+    /// everyone is `false`.
+    func setMaster() async -> [String: Bool] {
+        var result: [String: Bool] = [
+            "gg": false,
+            "dd": false,
+            "toto": false
+        ]
+
+        let calendar = Calendar.current
+        let now = Date()
+        guard let prevMonthDate = calendar.date(byAdding: .month, value: -1, to: now) else {
+            return result
+        }
+        let prevYear = calendar.component(.year, from: prevMonthDate)
+        let prevMonth = calendar.component(.month, from: prevMonthDate)
+
+        // Load scores for the previous month’s year, then filter by previous month
+        let allScores = await loadScoresSafely(for: prevYear)
+        let lastMonthScores = allScores.filter { calendar.component(.month, from: $0.date) == prevMonth }
+        guard !lastMonthScores.isEmpty else {
+            // No games last month
+            return result
+        }
+
+        // Compute the maximum consecutive wins per player for that month
+        var maxByPlayer: [String: Int] = ["gg": Int.min, "dd": Int.min, "toto": Int.min]
+        for game in lastMonthScores {
+            if let v = game.ggConsecutiveWins { maxByPlayer["gg"] = max(maxByPlayer["gg"] ?? Int.min, v) }
+            if let v = game.ddConsecutiveWins { maxByPlayer["dd"] = max(maxByPlayer["dd"] ?? Int.min, v) }
+            if let v = game.totoConsecutiveWins { maxByPlayer["toto"] = max(maxByPlayer["toto"] ?? Int.min, v) }
+        }
+        
+        print("Max consecutive wins per player: \(maxByPlayer)")
+
+        // Determine the global maximum among players that actually had a value
+        let observedValues = maxByPlayer.values.filter { $0 != Int.min }
+        guard let globalMax = observedValues.max() else {
+            // No _consecutive_wins recorded for last month
+            return result
+        }
+
+        // Mark all players who tie for the max as masters
+        for (player, value) in maxByPlayer where value == globalMax {
+            result[player] = true
+        }
+
+        return result
+    }
 
 }
 

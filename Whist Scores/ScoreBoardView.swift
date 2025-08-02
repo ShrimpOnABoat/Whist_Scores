@@ -32,10 +32,22 @@ struct ScoreBoardView: View {
                             let isPerfect = gameManager.perfectStreak[name] == true
 
                             HStack(spacing: 8 * M) {
-                                if isPerfect {
-                                    Circle()
-                                        .fill(Color.red)
-                                        .frame(width: 8 * M, height: 8 * M)
+                                VStack {
+                                    // Crown aligned above the dot
+                                    if gameManager.isMaster[name] == true {
+                                        Image(systemName: "crown.fill")
+                                            .font(.system(size: 12 * M))
+                                            .foregroundColor(.yellow)
+                                            .shadow(radius: 1 * M)
+                                            .accessibilityLabel(Text("Master of the month"))
+                                    }
+                                    
+                                    // Red dot (or spacer to keep alignment)
+                                    if isPerfect {
+                                        Circle()
+                                            .fill(Color.red)
+                                            .frame(width: 8 * M, height: 8 * M)
+                                    } 
                                 }
 
                                 Text(name.uppercased())
