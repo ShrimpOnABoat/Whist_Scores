@@ -28,6 +28,7 @@ struct GameState: Codable {
     var playerBets: [String: [Int]]
     var playerTricks: [String: [Int]]
     var lastPlayer: String?
+    var perfectStreak: [String: Bool]
 }
 
 class GameManager: ObservableObject {
@@ -43,6 +44,7 @@ class GameManager: ObservableObject {
     @Published var playerBets: [String: [Int]] = [:]
     @Published var playerTricks: [String: [Int]] = [:]
     @Published var lastPlayer: String?
+    @Published var perfectStreak: [String: Bool] = ["gg": true, "dd": true, "toto": true]
     
     var loser: Loser?
     @Published var needsLoser: Bool = false
@@ -115,6 +117,7 @@ class GameManager: ObservableObject {
     func newGame() {
         UserDefaults.standard.removeObject(forKey: "savedGameState")
         lastPlayer = nil
+        perfectStreak = ["gg": true, "dd": true, "toto": true]
         advanceDealer()
         self.currentRound = -1
         self.scores = [:]
@@ -248,6 +251,13 @@ class GameManager: ObservableObject {
                 playerTricks[player] = []
             }
             playerTricks[player]?.append(tricks[player] ?? 0)
+
+            // Update the perfectStreak for each player
+            if let bet = playerBets[player]?.last, let trick = playerTricks[player]?.last {
+                if bet != trick {
+                    perfectStreak[player] = false
+                }
+            }
         }
         
         updateScores()
@@ -455,7 +465,9 @@ class GameManager: ObservableObject {
             bonusCards: bonusCards,
             scores: scores,
             playerBets: playerBets,
-            playerTricks: playerTricks
+            playerTricks: playerTricks,
+            lastPlayer: lastPlayer ?? nil,
+            perfectStreak: perfectStreak
         )
         
         do {

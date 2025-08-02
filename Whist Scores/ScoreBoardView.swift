@@ -27,27 +27,39 @@ struct ScoreBoardView: View {
                 // Player Names
                 HStack {
                     ForEach(gameManager.players, id: \.self) { name in
-                        ZStack(alignment: .trailing) {
-                            HStack(spacing: 4 * M) {
-                                let isDealer = gameManager.dealer == name
+                        ZStack {
+                            let isDealer = gameManager.dealer == name
+                            let isPerfect = gameManager.perfectStreak[name] == true
+
+                            HStack(spacing: 8 * M) {
+                                if isPerfect {
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 8 * M, height: 8 * M)
+                                }
 
                                 Text(name.uppercased())
                                     .font(.system(size: 18 * M, weight: .semibold))
                                     .foregroundColor(isDealer ? .white : .black)
-
-                                if isDealer {
-                                    DealerButton(size: 25 * M)
-                                        .offset(x: 5 * M)
-                                }
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(6 * M)
+                            .padding(.horizontal, 10 * M)
+                            .padding(.vertical, 6 * M)
+                            .frame(minWidth: 90 * M, maxWidth: .infinity, alignment: .center)
+                            .padding(.trailing, isDealer ? (25 * M + 6 * M) : 0) // reserve space for the overlaid dealer button
                             .background(
-                                gameManager.dealer == name ?
+                                isDealer ?
                                     RoundedRectangle(cornerRadius: 8 * M)
                                         .fill(Color.gray.opacity(0.8)) :
                                     nil
                             )
+                            .overlay(alignment: .trailing) {
+                                if isDealer {
+                                    DealerButton(size: 25 * M)
+                                        .padding(.trailing, 10 * M) // keep inside the grey background
+                                }
+                            }
                         }
                         .frame(maxWidth: .infinity)
                     }
