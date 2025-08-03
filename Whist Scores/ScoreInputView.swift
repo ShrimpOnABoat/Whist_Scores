@@ -25,13 +25,12 @@ struct ScoreInputView: View {
                 tricks = defaults
             }
         
-        Form {
-            Section(header: Text("Saisis les résultats").bold()) {
-                HStack {
-                    Text(gameManager.players[0])
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Picker("Tricks", selection: Binding(
+        VStack(alignment: .center, spacing: 16) {
+            Text("Saisis les résultats").bold()
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 3), spacing: 16) {
+                // First player's picker
+                Group {
+                    Picker("", selection: Binding(
                         get: { tricks[gameManager.players[0]] ?? 0 },
                         set: { tricks[gameManager.players[0]] = $0 }
                     )) {
@@ -39,37 +38,37 @@ struct ScoreInputView: View {
                             Text("\(value)").tag(value)
                         }
                     }
+                    .labelsHidden()
                     .pickerStyle(.wheel)
-                    .frame(height: 80)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 120)
                     .clipped()
                 }
 
-                HStack {
-                    Text(gameManager.players[1])
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    let maxDD = gameManager.cardsForCurrentRound - (tricks[gameManager.players[0]] ?? 0)
-                    Picker("Tricks", selection: Binding(
+                // Second player's picker (range constrained by first)
+                Group {
+                    let maxDD = max(0, gameManager.cardsForCurrentRound - (tricks[gameManager.players[0]] ?? 0))
+                    Picker("", selection: Binding(
                         get: { tricks[gameManager.players[1]] ?? 0 },
                         set: { tricks[gameManager.players[1]] = $0 }
                     )) {
-                        ForEach(0...max(0, maxDD), id: \.self) { value in
+                        ForEach(0...maxDD, id: \.self) { value in
                             Text("\(value)").tag(value)
                         }
                     }
+                    .labelsHidden()
                     .pickerStyle(.wheel)
-                    .frame(height: 80)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 120)
                     .clipped()
                 }
 
-                HStack {
-                    Text("toto")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
+                // Third value (computed, not interactive)
+                Group {
                     let totoTricks = gameManager.cardsForCurrentRound - (tricks[gameManager.players[0]] ?? 0) - (tricks[gameManager.players[1]] ?? 0)
-                    Text("\(totoTricks)")
-                        .frame(height: 80)
+                    Text("\(max(0, totoTricks))")
                         .frame(maxWidth: .infinity)
+                        .frame(height: 120)
                         .foregroundColor(.secondary)
                 }
             }

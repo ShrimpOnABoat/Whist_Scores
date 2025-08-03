@@ -9,34 +9,32 @@ struct BetInputView: View {
         ScoreBoardView()
             .environmentObject(gameManager)
         
-            Form {
-                Section(header: Text("Saisis les mises").bold()) {
+        VStack(alignment: .center, spacing: 16) {
+            Text("Saisis les mises").bold()
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 3), spacing: 16) {
                 ForEach(gameManager.players, id: \.self) { player in
-                    HStack {
-                        Text(player)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                    Group {
                         if shouldShowDice(for: player) {
                             Text("🎲")
-                                .frame(height: 80)
                                 .frame(maxWidth: .infinity)
+                                .frame(height: 120)
                                 .onAppear {
                                     bets[player] = -1
                                 }
                         } else {
-                            Picker("Bet", selection: Binding(
+                            Picker("", selection: Binding(
                                 get: { bets[player] ?? -1 },
                                 set: { bets[player] = $0 }
                             )) {
-                                if bets[player] == nil {
-                                    Text("–").tag(-1)
-                                }
+                                if bets[player] == nil { Text("–").tag(-1) }
                                 ForEach(0...gameManager.cardsForCurrentRound, id: \.self) { value in
                                     Text("\(value)").tag(value)
                                 }
                             }
+                            .labelsHidden()
                             .pickerStyle(.wheel)
-                            .frame(height: 80)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 120)
                             .clipped()
                         }
                     }
