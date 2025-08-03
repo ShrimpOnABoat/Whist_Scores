@@ -378,57 +378,80 @@ class GameManager: ObservableObject {
     }
     
     func determinePosition(for player: String) -> Int {
-        /// Returns 1 if the player has the highest score (even in case of tie),
-        /// 2 if in the middle, and 3 if last based on current and historical scores.
-        
+        /// Returns 1 if the player has the highest score,
+        /// 2 if in the middle, and 3 if last.
+        /// On the last round, use recursive tiebreaking by comparing prior round scores.
+
         let currentScores = players.map { ($0, scores[$0]?.last ?? 0) }
-        let sortedByScore = currentScores.sorted { $0.1 > $1.1 }
-        let highestScore = sortedByScore.first?.1 ?? 0
-        let lowestScore = sortedByScore.last?.1 ?? 0
         let playerScore = scores[player]?.last ?? 0
 
-        if playerScore == highestScore {
-            return 1
-        }
+        // If it's not the last round, keep existing logic
+        if currentRound < 11 {
+            let sortedByScore = currentScores.sorted { $0.1 > $1.1 }
+            let highestScore = sortedByScore.first?.1 ?? 0
+            let lowestScore = sortedByScore.last?.1 ?? 0
 
-        if playerScore == lowestScore {
-            let playersWithLowest = currentScores.filter { $0.1 == lowestScore }.map { $0.0 }
-
-            if playersWithLowest.count > 1 {
-                let otherPlayer = playersWithLowest.first { $0 != player }
-
-                for round in stride(from: currentRound - 1, through: 0, by: -1) {
-                    let playerScoreAtRound = scores[player]?[round] ?? Int.min
-                    let otherScoreAtRound = scores[otherPlayer ?? ""]?[round] ?? Int.min
-
-                    if playerScoreAtRound != otherScoreAtRound {
-                        return playerScoreAtRound < otherScoreAtRound ? 3 : 2
-                    }
-                }
-
-                // Fallback to dealer order
-                if let dealerIndex = players.firstIndex(of: dealer),
-                   let playerIndex = players.firstIndex(of: player),
-                   let otherIndex = players.firstIndex(of: otherPlayer ?? "") {
-
-                    let leftOfDealerIndex = (dealerIndex + 1) % players.count
-
-                    if playerIndex == dealerIndex {
-                        return 3
-                    } else if otherIndex == dealerIndex {
-                        return 2
-                    } else if playerIndex == leftOfDealerIndex {
-                        return 3
-                    } else {
-                        return 2
-                    }
-                }
-            } else {
-                return 3
+            if playerScore == highestScore {
+                return 1
             }
+
+            if playerScore == lowestScore {
+                let playersWithLowest = currentScores.filter { $0.1 == lowestScore }.map { $0.0 }
+
+                if playersWithLowest.count > 1 {
+                    let otherPlayer = playersWithLowest.first { $0 != player }
+
+                    for round in stride(from: currentRound - 1, through: 0, by: -1) {
+                        let playerScoreAtRound = scores[player]?[round] ?? Int.min
+                        let otherScoreAtRound = scores[otherPlayer ?? ""]?[round] ?? Int.min
+
+                        if playerScoreAtRound != otherScoreAtRound {
+                            return playerScoreAtRound < otherScoreAtRound ? 3 : 2
+                        }
+                    }
+
+                    // Fallback to dealer order
+                    if let dealerIndex = players.firstIndex(of: dealer),
+                       let playerIndex = players.firstIndex(of: player),
+                       let otherIndex = players.firstIndex(of: otherPlayer ?? "") {
+
+                        let leftOfDealerIndex = (dealerIndex + 1) % players.count
+
+                        if playerIndex == dealerIndex {
+                            return 3
+                        } else if otherIndex == dealerIndex {
+                            return 2
+                        } else if playerIndex == leftOfDealerIndex {
+                            return 3
+                        } else {
+                            return 2
+                        }
+                    }
+                } else {
+                    return 3
+                }
+            }
+
+            return 2
         }
 
-        return 2
+        // Special logic for round 11: full ranking
+        func compare(_ a: String, _ b: String) -> Bool {
+            for round in stride(from: currentRound, through: 0, by: -1) {
+                let aScore = scores[a]?[round] ?? Int.min
+                let bScore = scores[b]?[round] ?? Int.min
+                if aScore != bScore {
+                    return aScore > bScore
+                }
+            }
+            return false // fallback to preserve order
+        }
+
+        let ranked = players.sorted(by: compare)
+
+        if ranked[0] == player { return 1 }
+        if ranked[1] == player { return 2 }
+        return 3
     }
     
     func suggestedTricksForCurrentRoundFromBets() -> [String: Int] {
