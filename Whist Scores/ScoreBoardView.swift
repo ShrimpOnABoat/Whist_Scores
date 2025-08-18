@@ -18,6 +18,8 @@ struct ScoreBoardView: View {
 
         let round = gameManager.currentRound
         let roundString = round < 3 ? "\(round+1)/3" : round < 11 ? "\(round - 1)" : "10"
+        let streaks: [String: Int] = Dictionary(uniqueKeysWithValues: gameManager.players.map { ($0, gameManager.consecutiveWins(for: $0)) })
+        let maxStreak: Int = streaks.values.max() ?? 0
 
         ZStack {
             VStack(spacing: 12 * M) {
@@ -47,12 +49,12 @@ struct ScoreBoardView: View {
                                         Circle()
                                             .fill(Color.red)
                                             .frame(width: 8 * M, height: 8 * M)
-                                    } 
+                                    }
                                 }
 
                                 Text(name.uppercased())
                                     .font(.system(size: 18 * M, weight: .semibold))
-                                    .foregroundColor(isDealer ? .white : .black)
+                                    .foregroundColor(isDealer ? .white : .primary)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
                             }
@@ -103,55 +105,10 @@ struct ScoreBoardView: View {
                 }
 
                 // Tricks and Scores
-                HStack {
-                    ForEach(gameManager.players, id: \.self) { player in
-                        let totalTricks = gameManager.playerBets[player]?.reduce(0, +) ?? 0
-                        let scoreArray = gameManager.scores[player] ?? []
-                        let score = round > 0 ? scoreArray[round-1] : 0
-                        HStack {
-                            Text("\(totalTricks)")
-                            Text("\(score)")
-                                .bold()
-                        }
-                        .font(.system(size: 20 * M))
-                        .frame(maxWidth: .infinity)
-                    }
-                }
+                tricksAndScoresRow(M: M, round: round, streaks: streaks, maxStreak: maxStreak)
 
                 // Current round bets
-                HStack {
-                    ForEach(gameManager.players, id: \.self) { player in
-                        let bets = gameManager.playerBets[player] ?? []
-                        let bet = round < bets.count ? bets[round] : -1
-                        if bet > -1 {
-                            Text("\(bet)")
-                                .font(.system(size: 18 * M, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            Text("–")
-                                .font(.system(size: 18 * M))
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                }
-                .padding(4 * M)
-                .background {
-                    let expected = max(round - 1, 1)
-                    if let total = gameManager.totalRoundBets() {
-                        let diff = total - expected
-                        if diff == 0 {
-                            Color.clear
-                        } else if diff > 0 {
-                            Color.red.opacity(0.2 * Double(abs(diff)))
-                        } else if diff < 0 {
-                            Color.blue.opacity(0.2 * Double(abs(diff)))
-                        }
-                    } else {
-                        Color.clear
-                    }
-                }
-                .cornerRadius(5 * M)
+                currentRoundBetsRow(M: M, round: round)
             }
             .padding(12 * M)
         }
@@ -163,6 +120,63 @@ struct ScoreBoardView: View {
         .sheet(isPresented: $showHistory) {
             RoundHistoryView(isPresented: $showHistory)
                 .environmentObject(gameManager)
+        }
+    }
+    // MARK: - Helper Views
+
+    private func tricksAndScoresRow(M: CGFloat, round: Int, streaks: [String:Int], maxStreak: Int) -> some View {
+        HStack {
+            ForEach(gameManager.players, id: \.self) { player in
+                let totalTricks = gameManager.playerBets[player]?.reduce(0, +) ?? 0
+                let scoreArray = gameManager.scores[player] ?? []
+                let score = round > 0 ? scoreArray[round-1] : 0
+                HStack {
+                    Text("\(totalTricks)")
+                    Text("\(score)")
+                        .bold()
+                    if maxStreak > 3 && streaks[player] == maxStreak {
+                        Text("+5")
+                            .foregroundColor(.green)
+                    }
+                }
+                .font(.system(size: 20 * M))
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func currentRoundBetsRow(M: CGFloat, round: Int) -> some View {
+        HStack {
+            ForEach(gameManager.players, id: \.self) { player in
+                let bets = gameManager.playerBets[player] ?? []
+                let bet = round < bets.count ? bets[round] : -1
+                if bet > -1 {
+                    Text("\(bet)")
+                        .font(.system(size: 18 * M, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Text("–")
+                        .font(.system(size: 18 * M))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .padding(4 * M)
+        .background(betsBackgroundColor(round: round))
+        .cornerRadius(5 * M)
+    }
+
+    private func betsBackgroundColor(round: Int) -> Color {
+        let expected = max(round - 1, 1)
+        guard let total = gameManager.totalRoundBets() else { return .clear }
+        let diff = total - expected
+        if diff == 0 {
+            return .clear
+        } else if diff > 0 {
+            return Color.red.opacity(0.2 * Double(abs(diff)))
+        } else {
+            return Color.blue.opacity(0.2 * Double(abs(diff)))
         }
     }
 }

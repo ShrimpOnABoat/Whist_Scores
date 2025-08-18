@@ -166,6 +166,7 @@ class GameManager: ObservableObject {
         case .betInput:
             if currentRound > 0 {
                 currentRound -= 1
+                retreatDealer()
                 for player in players {
                     playerTricks[player]?.removeLast()
                     scores[player]?.removeLast()
@@ -184,6 +185,13 @@ class GameManager: ObservableObject {
         if let currentIndex = players.firstIndex(of: dealer) {
             let nextIndex = (currentIndex + 1) % players.count
             dealer = players[nextIndex]
+        }
+    }
+
+    func retreatDealer() {
+        if let currentIndex = players.firstIndex(of: dealer) {
+            let prevIndex = (currentIndex - 1 + players.count) % players.count
+            dealer = players[prevIndex]
         }
     }
     
@@ -218,6 +226,7 @@ class GameManager: ObservableObject {
         }
         
         if currentRound == 11 {
+            // Existing: +15 to the player with the highest total bets (strictly greater than second place)
             let totalBets: [String: Int] = players.reduce(into: [:]) { result, player in
                 result[player] = playerBets[player]?.reduce(0, +) ?? 0
             }
@@ -228,6 +237,18 @@ class GameManager: ObservableObject {
                 if var roundScores = scores[winner], currentRound < roundScores.count {
                     roundScores[currentRound] += 15
                     scores[winner] = roundScores
+                }
+            }
+            
+            // New: +5 to the player(s) with the highest consecutive wins, if that max is > 3
+            let streaks = Dictionary(uniqueKeysWithValues: players.map { ($0, consecutiveWins(for: $0)) })
+            let maxStreak = streaks.values.max() ?? 0
+            if maxStreak > 3 {
+                for player in players where streaks[player] == maxStreak {
+                    if var roundScores = scores[player], currentRound < roundScores.count {
+                        roundScores[currentRound] += 5
+                        scores[player] = roundScores
+                    }
                 }
             }
         }
@@ -317,7 +338,7 @@ class GameManager: ObservableObject {
         }
     }
     
-    private func consecutiveWins(for player: String) -> Int {
+    func consecutiveWins(for player: String) -> Int {
         guard let bets = playerBets[player], let tricks = playerTricks[player] else { return 0 }
 
         var count = 0
@@ -386,7 +407,7 @@ class GameManager: ObservableObject {
         let playerScore = scores[player]?.last ?? 0
 
         // If it's not the last round, keep existing logic
-        if currentRound < 11 {
+        if currentRound < 12 {
             let sortedByScore = currentScores.sorted { $0.1 > $1.1 }
             let highestScore = sortedByScore.first?.1 ?? 0
             let lowestScore = sortedByScore.last?.1 ?? 0
@@ -435,9 +456,9 @@ class GameManager: ObservableObject {
             return 2
         }
 
-        // Special logic for round 11: full ranking
+        // Special logic for round 12: full ranking
         func compare(_ a: String, _ b: String) -> Bool {
-            for round in stride(from: currentRound, through: 0, by: -1) {
+            for round in stride(from: currentRound - 1, through: 0, by: -1) {
                 let aScore = scores[a]?[round] ?? Int.min
                 let bScore = scores[b]?[round] ?? Int.min
                 if aScore != bScore {
