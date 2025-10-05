@@ -171,6 +171,7 @@ class GameManager: ObservableObject {
                     playerTricks[player]?.removeLast()
                     scores[player]?.removeLast()
                 }
+                reEvaluateStreak()
                 phase = .scoreInput
             }
 
@@ -192,6 +193,16 @@ class GameManager: ObservableObject {
         if let currentIndex = players.firstIndex(of: dealer) {
             let prevIndex = (currentIndex - 1 + players.count) % players.count
             dealer = players[prevIndex]
+        }
+    }
+    
+    func reEvaluateStreak() {
+        for player in players {
+            let betsCount = playerBets[player]?.count ?? 0
+            let tricksCount = playerTricks[player]?.count ?? 0
+            let rounds = min(betsCount, tricksCount)
+            // A "perfect streak" means all recorded rounds so far match.
+            perfectStreak[player] = consecutiveWins(for: player) == rounds
         }
     }
     

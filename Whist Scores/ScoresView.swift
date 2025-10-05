@@ -366,29 +366,29 @@ struct DetailedScoresView: View {
 
                             Text(group.monthName)
                                 .font(.headline)
-                                .frame(width: 80, alignment: .leading)
+                                .frame(width: 100, alignment: .leading)
                             Spacer(minLength: 0)
 
                             HStack(spacing: 4) {
-                                if masters["gg"] == true {
-                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
-                                }
+//                                if masters["gg"] == true {
+//                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
+//                                }
                                 Text("GG \(group.tallies.gg)")
                             }
                             .frame(width: 80)
 
                             HStack(spacing: 4) {
-                                if masters["dd"] == true {
-                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
-                                }
+//                                if masters["dd"] == true {
+//                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
+//                                }
                                 Text("DD \(group.tallies.dd)")
                             }
                             .frame(width: 80)
 
                             HStack(spacing: 4) {
-                                if masters["toto"] == true {
-                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
-                                }
+//                                if masters["toto"] == true {
+//                                    Image(systemName: "crown.fill").foregroundColor(.yellow)
+//                                }
                                 Text("Toto \(group.tallies.toto)")
                             }
                             .frame(width: 80)
