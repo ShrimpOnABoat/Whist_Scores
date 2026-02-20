@@ -289,11 +289,13 @@ class GameManager: ObservableObject {
     }
     
     func submitTricks(tricks: [String: Int]) {
+        let normalizedTricks = normalizedTricksForCurrentRound(from: tricks)
+        
         for player in players {
             if playerTricks[player] == nil {
                 playerTricks[player] = []
             }
-            playerTricks[player]?.append(tricks[player] ?? 0)
+            playerTricks[player]?.append(normalizedTricks[player] ?? 0)
 
             // Update the perfectStreak for each player
             if let bet = playerBets[player]?.last, let trick = playerTricks[player]?.last {
@@ -306,6 +308,25 @@ class GameManager: ObservableObject {
         updateScores()
         saveState()
         advanceToNextRound()
+    }
+    
+    func normalizedTricksForCurrentRound(from rawTricks: [String: Int]) -> [String: Int] {
+        var result: [String: Int] = [:]
+        var remaining = cardsForCurrentRound
+        
+        for (index, player) in players.enumerated() {
+            if index == players.count - 1 {
+                result[player] = max(0, remaining)
+                continue
+            }
+            
+            let requested = rawTricks[player] ?? 0
+            let clamped = max(0, min(requested, remaining))
+            result[player] = clamped
+            remaining -= clamped
+        }
+        
+        return result
     }
     
     //MARK: Upload score
