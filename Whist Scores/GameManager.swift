@@ -393,6 +393,11 @@ class GameManager: ObservableObject {
             }
             return
         }
+        
+        let sortedScores = players
+            .map { ($0, scores[$0]?.last ?? 0) }
+            .sorted { $0.1 > $1.1 }
+        let secondHighestScore = sortedScores.dropFirst().first?.1
 
         var positionToPlayers: [Int: [String]] = [:]
 
@@ -419,8 +424,7 @@ class GameManager: ObservableObject {
                     bonusCards[player] = 2
                 } else if
                     let score = scores[player]?.last,
-                    let second = positionToPlayers[2]?.first,
-                    let secondScore = scores[second]?.last,
+                    let secondScore = secondHighestScore,
                     score <= secondScore / 2 {
                     bonusCards[player] = 2
                 }

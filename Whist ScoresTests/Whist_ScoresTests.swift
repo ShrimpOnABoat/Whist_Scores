@@ -63,5 +63,21 @@ struct Whist_ScoresTests {
         #expect(gameManager.playerTricks["dd"]?.first == 1)
         #expect(gameManager.playerTricks["toto"]?.first == 0)
     }
+    
+    @Test func assignBonusCards_tieForFirst_stillGivesTwoToLastWhenUnderHalf() {
+        let gameManager = GameManager()
+        gameManager.players = ["gg", "dd", "toto"]
+        gameManager.currentRound = 4
+        gameManager.dealer = "gg"
+        gameManager.scores = [
+            "gg": [40],
+            "dd": [100],
+            "toto": [100]
+        ]
+        
+        gameManager.assignBonusCards()
+        
+        #expect(gameManager.bonusCards["gg"] == 2)
+    }
 
 }
